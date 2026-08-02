@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixabaie - Partagez vos photos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="index.html" class="logo">
+      <span class="logo-badge"><span>P</span></span>
+      <span class="logo-word">Pixa<span class="accent">baie</span></span>
+    </a>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="searchInput" placeholder="Rechercher une photo...">
+    </div>
+    <nav class="nav-links" id="navLinks"></nav>
+  </header>
+
+  <section class="categories-bar" id="categoriesBar">
+    <button class="cat-btn active" data-id="">Toutes</button>
+  </section>
+
+  <main>
+    <div id="gallery" class="gallery"></div>
+    <p id="emptyMessage" class="empty-message" hidden><strong>Aucune photo ici pour le moment</strong>Soyez la première personne à publier dans cette catégorie.</p>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
