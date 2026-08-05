@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { isLoggedIn } from './auth.js';
+import { isLoggedIn, resolveImageUrl } from './auth.js';
 
 function timeAgo(dateStr) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -39,7 +39,7 @@ async function loadNotifications() {
     dropdown.innerHTML = '<h4>Notifications</h4>' + notifications.map(n => `
       <div class="notif-item ${n.is_read ? '' : 'unread'}" data-id="${n.id}">
         <div class="notif-thumb-wrap">
-          ${n.filename ? `<img src="/uploads/${n.filename}" alt="" class="notif-thumb">` : ''}
+          ${n.filename ? `<img src="${resolveImageUrl(n.filename)}" alt="" class="notif-thumb">` : ''}
           <span class="notif-heart-badge">${heartIcon}</span>
         </div>
         <div class="notif-text">

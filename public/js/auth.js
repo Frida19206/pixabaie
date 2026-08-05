@@ -31,13 +31,21 @@ export function logout() {
   window.location.href = 'index.html';
 }
 
+// Résout une URL d'image : URL complète (Cloudinary) telle quelle, ou ancien chemin local préfixé
+export function resolveImageUrl(value, localFolder = '') {
+  if (!value) return '';
+  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  return `/uploads/${localFolder}${value}`;
+}
+
 // Génère le HTML d'un avatar : photo si disponible, sinon initiale sur fond dégradé
 export function avatarHTML(user, { sizeClass = 'avatar', id = '', extraAttrs = '' } = {}) {
   const idAttr = id ? `id="${id}"` : '';
   const initial = (user.username || '?').charAt(0).toUpperCase();
 
   if (user.avatar_filename) {
-    return `<img src="/uploads/avatars/${user.avatar_filename}" class="${sizeClass} avatar-img" alt="${user.username}" ${idAttr} ${extraAttrs}>`;
+    const src = resolveImageUrl(user.avatar_filename, 'avatars/');
+    return `<img src="${src}" class="${sizeClass} avatar-img" alt="${user.username}" ${idAttr} ${extraAttrs}>`;
   }
   return `<div class="${sizeClass}" ${idAttr} ${extraAttrs}>${initial}</div>`;
 }

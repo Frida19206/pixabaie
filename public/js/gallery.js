@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { isLoggedIn, getUser, avatarHTML } from './auth.js';
+import { isLoggedIn, getUser, avatarHTML, resolveImageUrl } from './auth.js';
 
 let currentCategory = '';
 let currentSearch = '';
@@ -53,7 +53,7 @@ export function renderImages(images, container, emptyMessage) {
         </div>
 
         <div class="card-media">
-          <img src="/uploads/${img.filename}" alt="${img.title}" loading="lazy">
+          <img src="${resolveImageUrl(img.filename)}" alt="${img.title}" loading="lazy">
         </div>
 
         <p class="card-title">${img.title}</p>
