@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import { isLoggedIn, getUser, avatarHTML, resolveImageUrl } from './auth.js';
+import { minipixaApi, isLoggedIn as isClasseLoggedIn, getStoredUser as getClasseUser } from './api-minipixa.js';
 
 let currentCategory = '';
 let currentSearch = '';
@@ -10,7 +11,7 @@ const KEBAB_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12"
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>`;
 const PENCIL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`;
 
-// Rend une liste d'images dans le conteneur donné (galerie d'accueil OU galerie de profil)
+// Rend une liste d'images (personnelles et/ou de la classe) dans le conteneur donné
 export function renderImages(images, container, emptyMessage) {
   lastImages = images;
 
@@ -22,9 +23,13 @@ export function renderImages(images, container, emptyMessage) {
   if (emptyMessage) emptyMessage.hidden = true;
 
   const currentUser = getUser();
+  const classeUser = getClasseUser();
 
   container.innerHTML = images.map(img => {
-    const isOwner = currentUser && currentUser.id === img.user_id;
+    const isClasse = img.source === 'classe';
+    const isOwner = isClasse
+      ? (classeUser && classeUser.name === img.username)
+      : (currentUser && currentUser.id === img.user_id);
     const liked = img.liked_by_me == 1;
     const authorAvatar = avatarHTML(
       { username: img.username, avatar_filename: img.user_avatar },
@@ -32,20 +37,20 @@ export function renderImages(images, container, emptyMessage) {
     );
 
     return `
-      <article class="card" data-id="${img.id}">
+      <article class="card" data-id="${img.id}" data-source="${img.source}">
         <div class="card-header">
-          <a class="card-author" href="profile.html?user=${encodeURIComponent(img.username)}">
+          <a class="card-author" href="${isClasse ? '#' : `profile.html?user=${encodeURIComponent(img.username)}`}" ${isClasse ? 'onclick="return false;"' : ''}>
             ${authorAvatar}
             <div class="card-user">
               <p class="card-username">${img.username}</p>
-              ${img.category_name ? `<p class="card-category">${img.category_name}</p>` : ''}
+              <p class="card-category">${img.category_name || ''}${isClasse ? ' · classe' : ''}</p>
             </div>
           </a>
           ${isOwner ? `
             <div class="card-menu-wrap">
               <button class="card-menu-btn" data-toggle-menu>${KEBAB_ICON}</button>
               <div class="card-menu-dropdown" hidden>
-                <button class="dropdown-item edit-btn" data-id="${img.id}">${PENCIL_ICON} Modifier</button>
+                ${!isClasse ? `<button class="dropdown-item edit-btn" data-id="${img.id}">${PENCIL_ICON} Modifier</button>` : ''}
                 <button class="dropdown-item danger delete-btn" data-id="${img.id}">${TRASH_ICON} Supprimer</button>
               </div>
             </div>
@@ -92,19 +97,36 @@ export function renderImages(images, container, emptyMessage) {
   });
 }
 
+function findImage(id) {
+  return lastImages.find(i => i.id == id);
+}
+
 async function handleLike(btn) {
-  if (!isLoggedIn()) {
+  const img = findImage(btn.dataset.id);
+  if (!img) return;
+  const isClasse = img.source === 'classe';
+
+  if (isClasse) {
+    if (!isClasseLoggedIn()) {
+      alert("Connectez-vous sur la page \"Photos de la classe\" pour liker les photos de vos camarades.");
+      return;
+    }
+  } else if (!isLoggedIn()) {
     window.location.href = 'login.html';
     return;
   }
-  const id = btn.dataset.id;
+
   try {
-    const result = await api.toggleLike(id);
+    const result = isClasse
+      ? await minipixaApi.toggleLike(img.realId)
+      : await api.toggleLike(img.id);
+
+    const liked = result.liked !== undefined ? result.liked : !btn.classList.contains('liked');
     const countEl = btn.querySelector('.like-count');
     let count = parseInt(countEl.textContent, 10);
-    count = result.liked ? count + 1 : count - 1;
+    count = liked ? count + 1 : count - 1;
 
-    btn.classList.toggle('liked', result.liked);
+    btn.classList.toggle('liked', liked);
     btn.innerHTML = `${HEART_ICON} <span class="like-count">${count}</span>`;
   } catch (err) {
     alert(err.message);
@@ -112,10 +134,17 @@ async function handleLike(btn) {
 }
 
 async function handleDelete(btn, container, emptyMessage) {
+  const img = findImage(btn.dataset.id);
+  if (!img) return;
   if (!confirm('Supprimer cette photo ?')) return;
+
   try {
-    await api.deleteImage(btn.dataset.id);
-    lastImages = lastImages.filter(i => i.id != btn.dataset.id);
+    if (img.source === 'classe') {
+      await minipixaApi.deletePhoto(img.realId);
+    } else {
+      await api.deleteImage(img.id);
+    }
+    lastImages = lastImages.filter(i => i.id != img.id);
     renderImages(lastImages, container, emptyMessage);
   } catch (err) {
     alert(err.message);
@@ -170,7 +199,7 @@ async function openEditModal(img, container, emptyMessage) {
   });
 }
 
-// Recharge les données (fetch) et re-rend le DOM de la galerie d'accueil : pas de reload navigateur
+// Recharge les photos personnelles ET les photos de la classe, fusionnées en un seul flux (accueil uniquement)
 export async function loadImages(categoryId = '', search = '') {
   currentCategory = categoryId;
   currentSearch = search;
@@ -179,8 +208,34 @@ export async function loadImages(categoryId = '', search = '') {
   if (!gallery) return;
 
   try {
-    const images = await api.getImages({ category: categoryId, search });
-    renderImages(images, gallery, emptyMessage);
+    const ownImages = await api.getImages({ category: categoryId, search });
+    const tagged = ownImages.map(img => ({ ...img, source: 'pixabaie' }));
+
+    let classeImages = [];
+    // Les photos de la classe n'ont pas les mêmes catégories : on ne les mélange
+    // que sur le flux "Toutes", pas quand un filtre ou une recherche est actif.
+    if (!categoryId && !search) {
+      try {
+        const classePhotos = await minipixaApi.getPhotos();
+        classeImages = classePhotos.map(p => ({
+          id: `classe-${p.id}`,
+          realId: p.id,
+          title: p.title,
+          filename: p.url,
+          username: p.publisher,
+          category_name: p.category,
+          likes_count: p.likes_count,
+          liked_by_me: p.is_liked ? 1 : 0,
+          source: 'classe'
+        }));
+      } catch (err) {
+        console.error('Erreur chargement photos de la classe :', err);
+      }
+    }
+
+    // Mélange les deux flux façon fil d'actualité (au lieu de tout coller à la suite)
+    const merged = [...tagged, ...classeImages].sort(() => Math.random() - 0.5);
+    renderImages(merged, gallery, emptyMessage);
   } catch (err) {
     console.error(err);
   }
@@ -198,7 +253,7 @@ export async function loadCategories() {
       btn.addEventListener('click', () => {
         bar.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        loadImages(btn.dataset.id, currentSearch); // filtre AJAX, aucun rechargement de page
+        loadImages(btn.dataset.id, currentSearch);
       });
     });
   } catch (err) {

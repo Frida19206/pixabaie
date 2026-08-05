@@ -1,13 +1,4 @@
-import { minipixaApi, isLoggedIn, saveToken, clearToken } from './api-minipixa.js';
-
-const USER_KEY = 'minipixa_user';
-function getUser() {
-  const raw = localStorage.getItem(USER_KEY);
-  return raw ? JSON.parse(raw) : null;
-}
-function saveUser(user) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
+import { minipixaApi, isLoggedIn, saveToken, clearToken, getStoredUser as getUser, saveStoredUser as saveUser } from './api-minipixa.js';
 
 const authBlock = document.getElementById('authBlock');
 const publishBlock = document.getElementById('publishBlock');
@@ -117,7 +108,7 @@ registerForm.addEventListener('submit', async (e) => {
 document.getElementById('logoutClasseBtn').addEventListener('click', async () => {
   try { await minipixaApi.logout(); } catch (e) { /* on déconnecte localement de toute façon */ }
   clearToken();
-  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem('minipixa_user');
   updateAuthUI();
 });
 

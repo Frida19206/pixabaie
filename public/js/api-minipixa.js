@@ -1,5 +1,14 @@
 const BASE = 'https://mini-pixa-production-bs4miy.laravel.cloud/api';
 const TOKEN_KEY = 'minipixa_token';
+const USER_KEY = 'minipixa_user';
+
+export function getStoredUser() {
+  const raw = localStorage.getItem(USER_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+export function saveStoredUser(user) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
