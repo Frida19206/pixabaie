@@ -1,14 +1,93 @@
-import { api } from './api.js';
-import { isLoggedIn, renderNavLinks } from './auth.js';
+import { renderNavLinks } from './auth.js';
+import { minipixaApi, isLoggedIn, saveToken, clearToken, getStoredUser, saveStoredUser } from './api-minipixa.js';
 
 renderNavLinks();
 
-// Protection de la page : réservée aux utilisateurs connectés
-if (!isLoggedIn()) {
-  window.location.href = 'login.html';
+const classeAuthBlock = document.getElementById('classeAuthBlock');
+const uploadForm = document.getElementById('uploadForm');
+
+function showPublishForm() {
+  classeAuthBlock.hidden = true;
+  uploadForm.hidden = false;
+  loadCategoryOptions();
+}
+function showAuthForm() {
+  classeAuthBlock.hidden = false;
+  uploadForm.hidden = true;
 }
 
-const form = document.getElementById('uploadForm');
+if (isLoggedIn()) {
+  showPublishForm();
+} else {
+  showAuthForm();
+}
+
+// --- Onglets connexion / inscription ---
+const tabLogin = document.getElementById('tabLogin');
+const tabRegister = document.getElementById('tabRegister');
+const loginForm = document.getElementById('loginFormClasse');
+const registerForm = document.getElementById('registerFormClasse');
+const authError = document.getElementById('authError');
+
+tabLogin.addEventListener('click', () => {
+  tabLogin.className = 'btn btn-primary';
+  tabRegister.className = 'btn btn-outline';
+  loginForm.hidden = false;
+  registerForm.hidden = true;
+  authError.hidden = true;
+});
+tabRegister.addEventListener('click', () => {
+  tabRegister.className = 'btn btn-primary';
+  tabLogin.className = 'btn btn-outline';
+  registerForm.hidden = false;
+  loginForm.hidden = true;
+  authError.hidden = true;
+});
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  authError.hidden = true;
+  try {
+    const data = await minipixaApi.login({
+      email: document.getElementById('loginEmail').value.trim(),
+      password: document.getElementById('loginPassword').value
+    });
+    saveToken(data.token || data.access_token);
+    if (data.user) saveStoredUser(data.user);
+    showPublishForm();
+  } catch (err) {
+    authError.textContent = err.message;
+    authError.hidden = false;
+  }
+});
+
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  authError.hidden = true;
+  const password = document.getElementById('registerPassword').value;
+  const confirm = document.getElementById('registerPasswordConfirm').value;
+  if (password !== confirm) {
+    authError.textContent = 'Les mots de passe ne correspondent pas.';
+    authError.hidden = false;
+    return;
+  }
+  try {
+    const data = await minipixaApi.register({
+      name: document.getElementById('registerName').value.trim(),
+      email: document.getElementById('registerEmail').value.trim(),
+      password,
+      password_confirmation: confirm
+    });
+    saveToken(data.token || data.access_token);
+    if (data.user) saveStoredUser(data.user);
+    showPublishForm();
+  } catch (err) {
+    authError.textContent = err.message;
+    authError.hidden = false;
+  }
+});
+
+// --- Publication ---
 const errorBox = document.getElementById('errorBox');
 const categorySelect = document.getElementById('category');
 const dropzone = document.getElementById('dropzone');
@@ -17,6 +96,16 @@ const previewImg = document.getElementById('previewImg');
 const dzIcon = document.getElementById('dzIcon');
 const dzTitle = document.getElementById('dzTitle');
 const dzSub = document.getElementById('dzSub');
+
+async function loadCategoryOptions() {
+  try {
+    const categories = await minipixaApi.getCategories();
+    const list = Array.isArray(categories) ? categories : (categories.data || []);
+    categorySelect.innerHTML = list.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
 
 function showPreview(file) {
   if (!file) return;
@@ -33,7 +122,6 @@ function showPreview(file) {
 
 fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
 
-// Glisser-déposer sur la zone
 ['dragover', 'dragleave', 'drop'].forEach(eventName => {
   dropzone.addEventListener(eventName, (e) => e.preventDefault());
 });
@@ -48,22 +136,11 @@ dropzone.addEventListener('drop', (e) => {
   }
 });
 
-async function loadCategoryOptions() {
-  try {
-    const categories = await api.getCategories();
-    categorySelect.innerHTML = '<option value="">-- Choisir une catégorie --</option>' +
-      categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  } catch (err) {
-    console.error(err);
-  }
-}
-loadCategoryOptions();
-
-form.addEventListener('submit', async (e) => {
+uploadForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorBox.hidden = true;
 
-  const file = document.getElementById('imageFile').files[0];
+  const file = fileInput.files[0];
   if (!file) {
     errorBox.textContent = 'Veuillez sélectionner une image.';
     errorBox.hidden = false;
@@ -76,7 +153,7 @@ form.addEventListener('submit', async (e) => {
   formData.append('image', file);
 
   try {
-    await api.createImage(formData);
+    await minipixaApi.createPhoto(formData);
     window.location.href = 'index.html';
   } catch (err) {
     errorBox.textContent = err.message;

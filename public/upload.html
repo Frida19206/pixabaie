@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Publier une image - Pixabaie</title>
+  <title>Publier une photo - Pixabaie</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -19,18 +19,50 @@
   </header>
 
   <main class="auth-page">
-    <form id="uploadForm" class="auth-form" enctype="multipart/form-data">
+
+    <!-- Étape 1 : connexion à la classe (affichée seulement si pas encore connectée) -->
+    <section id="classeAuthBlock" class="auth-form">
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <button id="tabLogin" class="btn btn-primary" type="button">Connexion</button>
+        <button id="tabRegister" class="btn btn-outline" type="button">Créer un compte</button>
+      </div>
+      <p class="auth-sub">Connectez-vous pour publier une photo visible par toute la classe.</p>
+      <p id="authError" class="error-box" hidden></p>
+
+      <form id="loginFormClasse">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" required>
+        <label for="loginPassword">Mot de passe</label>
+        <input type="password" id="loginPassword" required>
+        <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+      </form>
+
+      <form id="registerFormClasse" hidden>
+        <label for="registerName">Nom</label>
+        <input type="text" id="registerName" required>
+        <label for="registerEmail">Email</label>
+        <input type="email" id="registerEmail" required>
+        <label for="registerPassword">Mot de passe</label>
+        <input type="password" id="registerPassword" required minlength="6">
+        <label for="registerPasswordConfirm">Confirmer le mot de passe</label>
+        <input type="password" id="registerPasswordConfirm" required minlength="6">
+        <button type="submit" class="btn btn-primary btn-block">Créer mon compte</button>
+      </form>
+    </section>
+
+    <!-- Étape 2 : publication (affichée une fois connectée) -->
+    <form id="uploadForm" class="auth-form" enctype="multipart/form-data" hidden>
       <h1>Publier une photo</h1>
-      <p class="auth-sub">Elle apparaîtra immédiatement dans la galerie.</p>
+      <p class="auth-sub">Elle sera visible par toute la classe, immédiatement.</p>
       <p id="errorBox" class="error-box" hidden></p>
 
       <label for="imageFile">Photo</label>
-      <label class="dropzone" id="dropzone">
+      <label class="dropzone" id="dropzone" for="imageFile">
         <svg id="dzIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5M7 9l5-5 5 5M12 4v13" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span class="dz-title" id="dzTitle">Glissez une image ici</span>
-        <span class="dz-sub" id="dzSub">ou cliquez pour parcourir · JPEG, PNG, WEBP, GIF · 5 Mo max</span>
+        <span class="dz-sub" id="dzSub">ou cliquez pour parcourir · JPEG, PNG, WEBP, GIF</span>
         <img id="previewImg" class="dropzone-preview" hidden alt="Aperçu">
         <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp,image/gif" required>
       </label>
