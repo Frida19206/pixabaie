@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photos de la classe - Pixabaie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="index.html" class="logo">
+      <span class="logo-badge"><span>P</span></span>
+      <span class="logo-word">Pixa<span class="accent">baie</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html" class="btn btn-outline">← Mon site</a>
+      <span id="classeUserBadge"></span>
+    </nav>
+  </header>
+
+  <main>
+    <h1 style="font-family: var(--font-display); font-size: 1.6rem; margin: 10px 0 4px;">Photos de la classe</h1>
+    <p style="color: var(--slate); margin-bottom: 20px;">Publiées par vos camarades via l'API du professeur.</p>
+
+    <!-- Bloc connexion / inscription (affiché si non connectée à l'API de classe) -->
+    <section id="authBlock" class="auth-form" style="max-width: 480px; margin: 0 0 30px;">
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <button id="tabLogin" class="btn btn-primary">Connexion</button>
+        <button id="tabRegister" class="btn btn-outline">Créer un compte</button>
+      </div>
+
+      <p id="authError" class="error-box" hidden></p>
+
+      <form id="loginFormClasse">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" required>
+        <label for="loginPassword">Mot de passe</label>
+        <input type="password" id="loginPassword" required>
+        <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+      </form>
+
+      <form id="registerFormClasse" hidden>
+        <label for="registerName">Nom</label>
+        <input type="text" id="registerName" required>
+        <label for="registerEmail">Email</label>
+        <input type="email" id="registerEmail" required>
+        <label for="registerPassword">Mot de passe</label>
+        <input type="password" id="registerPassword" required minlength="6">
+        <label for="registerPasswordConfirm">Confirmer le mot de passe</label>
+        <input type="password" id="registerPasswordConfirm" required minlength="6">
+        <button type="submit" class="btn btn-primary btn-block">Créer mon compte</button>
+      </form>
+    </section>
+
+    <!-- Bloc publication (affiché si connectée) -->
+    <section id="publishBlock" class="auth-form" style="max-width: 480px; margin: 0 0 30px;" hidden>
+      <h3 style="font-family: var(--font-display); margin-bottom: 14px;">Publier une photo pour la classe</h3>
+      <p id="publishError" class="error-box" hidden></p>
+      <form id="publishForm">
+        <label for="publishTitle">Titre</label>
+        <input type="text" id="publishTitle" required>
+        <label for="publishCategory">Catégorie</label>
+        <select id="publishCategory"></select>
+        <label for="publishFile">Photo</label>
+        <input type="file" id="publishFile" accept="image/jpeg,image/png,image/webp,image/gif" required>
+        <button type="submit" class="btn btn-primary btn-block">Publier</button>
+      </form>
+      <button id="logoutClasseBtn" class="btn btn-outline btn-block" style="margin-top:10px;">Se déconnecter (API classe)</button>
+    </section>
+
+    <div id="classeGallery" class="gallery"></div>
+    <p id="classeEmptyMessage" class="empty-message" hidden><strong>Aucune photo pour le moment</strong>Revenez plus tard.</p>
+    <p id="classeLoading" class="empty-message">Chargement des photos de la classe...</p>
+  </main>
+
+  <script type="module" src="js/classe.js"></script>
+</body>
+</html>
