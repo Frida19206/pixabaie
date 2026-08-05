@@ -2,7 +2,7 @@ import { api } from './api.js';
 import { isLoggedIn, getUser, avatarHTML, resolveImageUrl } from './auth.js';
 import { minipixaApi, isLoggedIn as isClasseLoggedIn, getStoredUser as getClasseUser } from './api-minipixa.js';
 
-let currentCategory = '';
+let currentFilter = { ownId: '', classeId: '' };
 let currentSearch = '';
 let lastImages = [];
 
@@ -185,7 +185,7 @@ async function openEditModal(img, container, emptyMessage) {
       await api.updateImage(img.id, { title, category_id });
       close();
       if (container === document.getElementById('gallery')) {
-        loadImages(currentCategory, currentSearch);
+        loadImages(currentFilter, currentSearch);
       } else {
         img.title = title;
         img.category_id = category_id ? Number(category_id) : null;
@@ -200,37 +200,40 @@ async function openEditModal(img, container, emptyMessage) {
 }
 
 // Recharge les photos personnelles ET les photos de la classe, fusionnées en un seul flux (accueil uniquement)
-export async function loadImages(categoryId = '', search = '') {
-  currentCategory = categoryId;
+// filter peut être une chaîne (rétro-compatibilité) ou { ownId, classeId }
+export async function loadImages(filter = {}, search = '') {
+  const { ownId = '', classeId = '' } = typeof filter === 'string' ? { ownId: filter, classeId: filter } : filter;
+  currentFilter = { ownId, classeId };
   currentSearch = search;
+
   const gallery = document.getElementById('gallery');
   const emptyMessage = document.getElementById('emptyMessage');
   if (!gallery) return;
 
   try {
-    const ownImages = await api.getImages({ category: categoryId, search });
+    const ownImages = await api.getImages({ category: ownId, search });
     const tagged = ownImages.map(img => ({ ...img, source: 'pixabaie' }));
 
     let classeImages = [];
-    // Les photos de la classe n'ont pas les mêmes catégories : on ne les mélange
-    // que sur le flux "Toutes", pas quand un filtre ou une recherche est actif.
-    if (!categoryId && !search) {
-      try {
-        const classePhotos = await minipixaApi.getPhotos();
-        classeImages = classePhotos.map(p => ({
-          id: `classe-${p.id}`,
-          realId: p.id,
-          title: p.title,
-          filename: p.url,
-          username: p.publisher,
-          category_name: p.category,
-          likes_count: p.likes_count,
-          liked_by_me: p.is_liked ? 1 : 0,
-          source: 'classe'
-        }));
-      } catch (err) {
-        console.error('Erreur chargement photos de la classe :', err);
-      }
+    try {
+      const classePhotos = await minipixaApi.getPhotos(classeId);
+      const filtered = search
+        ? classePhotos.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
+        : classePhotos;
+
+      classeImages = filtered.map(p => ({
+        id: `classe-${p.id}`,
+        realId: p.id,
+        title: p.title,
+        filename: p.url,
+        username: p.publisher,
+        category_name: p.category,
+        likes_count: p.likes_count,
+        liked_by_me: p.is_liked ? 1 : 0,
+        source: 'classe'
+      }));
+    } catch (err) {
+      console.error('Erreur chargement photos de la classe :', err);
     }
 
     // Mélange les deux flux façon fil d'actualité (au lieu de tout coller à la suite)
@@ -241,19 +244,39 @@ export async function loadImages(categoryId = '', search = '') {
   }
 }
 
+// Fusionne les catégories des deux APIs par nom (insensible à la casse), pour un seul filtre synchronisé
 export async function loadCategories() {
   const bar = document.getElementById('categoriesBar');
   if (!bar) return;
   try {
-    const categories = await api.getCategories();
-    const buttons = categories.map(c => `<button class="cat-btn" data-id="${c.id}">${c.name}</button>`).join('');
+    const [ownCats, classCatsRaw] = await Promise.all([
+      api.getCategories(),
+      minipixaApi.getCategories().catch(() => [])
+    ]);
+    const classCats = Array.isArray(classCatsRaw) ? classCatsRaw : (classCatsRaw.data || []);
+
+    const merged = {};
+    ownCats.forEach(c => {
+      const key = c.name.trim().toLowerCase();
+      merged[key] = merged[key] || { name: c.name };
+      merged[key].ownId = c.id;
+    });
+    classCats.forEach(c => {
+      const key = c.name.trim().toLowerCase();
+      merged[key] = merged[key] || { name: c.name };
+      merged[key].classeId = c.id;
+    });
+
+    const buttons = Object.values(merged).map(c => `
+      <button class="cat-btn" data-own-id="${c.ownId || ''}" data-classe-id="${c.classeId || ''}">${c.name}</button>
+    `).join('');
     bar.insertAdjacentHTML('beforeend', buttons);
 
     bar.querySelectorAll('.cat-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         bar.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        loadImages(btn.dataset.id, currentSearch);
+        loadImages({ ownId: btn.dataset.ownId || '', classeId: btn.dataset.classeId || '' }, currentSearch);
       });
     });
   } catch (err) {

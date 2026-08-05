@@ -14,6 +14,8 @@ searchInput.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     const activeCat = document.querySelector('.cat-btn.active');
-    loadImages(activeCat ? activeCat.dataset.id : '', searchInput.value.trim());
+    const ownId = activeCat ? (activeCat.dataset.ownId || '') : '';
+    const classeId = activeCat ? (activeCat.dataset.classeId || '') : '';
+    loadImages({ ownId, classeId }, searchInput.value.trim());
   }, 350);
 });
